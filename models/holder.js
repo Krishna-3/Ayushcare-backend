@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Counter = require('./counter');
 const { Schema } = mongoose;
 
 const holderSchema = new Schema({
@@ -9,6 +10,13 @@ const holderSchema = new Schema({
     password: {
         type: String,
         required: true
+    },
+    holderId: {
+        type: Number,
+        unique: true
+    },
+    photo: {
+        type: Buffer,
     },
     gender: {
         type: String,
@@ -74,5 +82,18 @@ const holderSchema = new Schema({
 }, { timestamps: true });
 
 holderSchema.path('members').validate(value => value.length <= 4, 'A holder can have a maximum of 4 members.');
+
+holderSchema.pre('save', async function (next) {
+    if (this.holderId) return next();
+
+    const counter = await Counter.findByIdAndUpdate(
+        { _id: 'holderId' },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+    );
+
+    this.holderId = counter.seq;
+    next();
+});
 
 module.exports = mongoose.model('Holder', holderSchema);

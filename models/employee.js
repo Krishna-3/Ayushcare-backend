@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Counter = require('./counter');
 const { Schema } = mongoose;
 
 const employeeSchema = new Schema({
@@ -9,6 +10,13 @@ const employeeSchema = new Schema({
     password: {
         type: String,
         required: true
+    },
+    employeeId: {
+        type: Number,
+        unique: true
+    },
+    photo: {
+        type: Buffer,
     },
     gender: {
         type: String,
@@ -60,5 +68,18 @@ const employeeSchema = new Schema({
         enum: ['employee']
     }
 }, { timestamps: true });
+
+employeeSchema.pre('save', async function (next) {
+    if (this.employeeId) return next();
+
+    const counter = await Counter.findByIdAndUpdate(
+        { _id: 'employeeId' },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+    );
+
+    this.employeeId = counter.seq;
+    next();
+});
 
 module.exports = mongoose.model('Employee', employeeSchema);

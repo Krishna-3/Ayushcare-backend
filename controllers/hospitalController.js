@@ -4,23 +4,37 @@ const Holder = require('../models/holder');
 
 const getPatients = async (req, res, next) => {
     const hospitalId = req.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const skip = (page - 1) * limit;
 
     try {
-        const patients = await Hospital.findById(hospitalId)
-            .populate({
-                path: 'patients.patient',
-                select: 'name age gender mobile holder',
-                // @ts-ignore
-                refPath: 'patients.patientModel',
-                // populate: {
-                //     path: 'holder',
-                //     select: 'name'
-                // }
-            })
-            .select('patients')
-            .exec();
 
-        res.json(patients.patients);
+        const hospital = await Hospital.findById(hospitalId).exec();
+
+        const [patients, patientsAggregate] = await Promise.all([
+            Hospital.findById(hospitalId)
+                .populate({
+                    path: 'patients.patient',
+                    select: 'name age gender mobile holder',
+                    // @ts-ignore
+                    refPath: 'patients.patientModel',
+                    // populate: {
+                    //     path: 'holder',
+                    //     select: 'name'
+                    // }
+                })
+                .select({
+                    'patients': { $slice: [skip, limit] }
+                }),
+
+            Hospital.aggregate([
+                { $match: { _id: hospital._id } },
+                { $project: { count: { $size: "$patients" } } }
+            ])
+        ]);
+
+        res.json({ patients: patients.patients, total: patientsAggregate[0]?.count || 0 });
 
     } catch (err) {
         next(err);
@@ -138,6 +152,47 @@ const uploadPhoto = async (req, res, next) => {
     }
 }
 
+const getHospital = async (req, res, next) => {
+    const hospitalId = req.id;
+
+    try {
+        const hospital = await Hospital.findById(hospitalId).select('-password -role -adminApproved -doctors -patients -photo -__v').exec();
+
+        res.json(hospital);
+
+    } catch (err) {
+        next(err)
+    }
+}
+
+const putHospital = async (req, res, next) => {
+    const hospitalId = req.id;
+    const { name, area, location, mobile, email, village, mandal, district, about } = req.body;
+    if (!name || !area || !location || !mobile || !email || !village || !mandal || !district || !about) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
+
+    try {
+        const hospital = await Hospital.findById(hospitalId).exec();
+
+        hospital.name = name;
+        hospital.area = area;
+        hospital.location = location;
+        hospital.mobile = mobile;
+        hospital.email = email;
+        hospital.village = village;
+        hospital.mandal = mandal;
+        hospital.district = district;
+        hospital.about = about;
+
+        await hospital.save();
+
+        res.status(200).json({ 'success': `Hospital ${name} updated` });
+    }
+    catch (err) {
+        next(err);
+    }
+}
+
+
 const deleteDoctor = async (req, res, next) => {
     const hospitalId = req.id;
     const { doctorId } = req.params;
@@ -184,6 +239,8 @@ module.exports = {
     addDoctor,
     getPhoto,
     uploadPhoto,
+    getHospital,
+    putHospital,
     deleteDoctor,
     deletePatient
 }

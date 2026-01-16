@@ -47,6 +47,49 @@ const addMember = async (req, res, next) => {
     }
 }
 
+const getHolder = async (req, res, next) => {
+    const holderId = req.id;
+
+    try {
+        const holder = await Holder.findById(holderId).select('-password -members -role -createdAt -updatedAt -__v -registeredBy').exec();
+
+        res.json(holder);
+    }
+    catch (err) {
+        next(err);
+    }
+}
+
+const putHolder = async (req, res, next) => {
+    const holderId = req.id;
+    const { name, gender, age, mobile, email, occupation, address, village, mandal, district, pincode, aadhaar } = req.body;
+    if (!name || !gender || !age || !mobile || !email || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
+
+    try {
+        const holder = await Holder.findById(holderId).exec();
+
+        holder.name = name;
+        holder.gender = gender;
+        holder.age = age;
+        holder.mobile = mobile;
+        holder.email = email;
+        holder.occupation = occupation;
+        holder.address = address;
+        holder.village = village;
+        holder.mandal = mandal;
+        holder.district = district;
+        holder.pincode = pincode;
+        holder.aadhaar = aadhaar;
+
+        await holder.save();
+
+        res.status(200).json({ 'success': `Holder ${name} updated` });
+    }
+    catch (err) {
+        next(err);
+    }
+}
+
 const deleteMember = async (req, res, next) => {
     const holderId = req.id;
     const { memberId } = req.params;
@@ -76,5 +119,7 @@ const deleteMember = async (req, res, next) => {
 module.exports = {
     getMembers,
     addMember,
+    getHolder,
+    putHolder,
     deleteMember
 }

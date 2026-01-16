@@ -13,6 +13,10 @@ router.post('/addDoctor', hospitalController.addDoctor);
 
 router.post('/uploadPhoto', photoUpload.single('photo'), hospitalController.uploadPhoto);
 
+router.get('/getHospital', hospitalController.getHospital);
+
+router.put('/putHospital', hospitalController.putHospital);
+
 router.get('/getPhoto', hospitalController.getPhoto);
 
 router.delete('/deleteDoctor/:doctorId', hospitalController.deleteDoctor);

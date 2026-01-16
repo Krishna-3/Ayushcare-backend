@@ -69,7 +69,7 @@ const handleHolderRegister = async (req, res, next) => {
         };
         await transporter.sendMail(mailOptions);
 
-        res.status(201).json({ 'success': `Holder ${name} created` });
+        res.status(201).json({ 'success': `Holder ${name} created`, holderId: query._id });
     }
     catch (err) {
         next(err);
@@ -151,7 +151,7 @@ const handleEmployeeRegister = async (req, res, next) => {
         };
         await transporter.sendMail(mailOptions);
 
-        res.status(201).json({ 'success': `Employee ${name} created` });
+        res.status(201).json({ 'success': `Employee ${name} created`, employeeId: query._id });
     }
     catch (err) {
         next(err);
