@@ -6,6 +6,12 @@ const Holder = require('../models/holder');
 const Hospital = require('../models/hospital');
 const Employee = require('../models/employee');
 const Admin = require('../models/admin');
+const Razorpay = require("razorpay");
+
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -24,11 +30,38 @@ const generateTempPasswordAndHash = async () => {
     return [await bcrypt.hash(tempPassword, 10), tempPassword];
 }
 
+const handleCreateOrder = async (req, res, next) => {
+
+    try {
+        const order = await razorpay.orders.create({
+            amount: 50 * 100,
+            currency: "INR",
+            receipt: "receipt_" + Date.now(),
+        });
+
+        if (!order) return res.status(500).json('Payment Error');
+
+        res.json(order);
+    }
+    catch (err) {
+        next(err);
+    }
+}
+
 const handleHolderRegister = async (req, res, next) => {
-    const { name, gender, age, mobile, email, occupation, address, village, mandal, district, pincode, aadhaar } = req.body;
-    if (!name || !gender || !age || !mobile || !email || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
+    const { name, gender, age, mobile, email, occupation, address, village, mandal, district, pincode, aadhaar, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    if (!name || !gender || !age || !mobile || !email || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
     const employeeId = req.id;
+
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+    const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+        .update(body)
+        .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) return res.status(400).json({ 'message': 'Payment is invalid' });
 
     const [holder, hospital, employee, admin] = await Promise.all([
         Holder.findOne({ email }).exec(),
@@ -99,9 +132,9 @@ const handleHospitalRegister = async (req, res, next) => {
             location,
             mobile,
             email,
-            village,
-            mandal,
-            district,
+            village: village.trim().toUpperCase(),
+            mandal: mandal.trim().toUpperCase(),
+            district: district.trim().toUpperCase(),
             about,
         });
 
@@ -281,6 +314,7 @@ const putPassword = async (req, res, next) => {
 }
 
 module.exports = {
+    handleCreateOrder,
     handleLogin,
     handleHolderRegister,
     handleHospitalRegister,

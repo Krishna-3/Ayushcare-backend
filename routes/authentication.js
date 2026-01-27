@@ -4,6 +4,8 @@ const verifyRoles = require('../middleware/verifyRole');
 const verifyJWT = require('../middleware/verifyJWT');
 const authenticationController = require('../controllers/authenticationController');
 
+router.get('/createOrder', verifyJWT, verifyRoles(['employee']), authenticationController.handleCreateOrder);
+
 router.post('/holderRegister', verifyJWT, verifyRoles(['employee']), authenticationController.handleHolderRegister);
 
 router.post('/hospitalRegister', authenticationController.handleHospitalRegister);

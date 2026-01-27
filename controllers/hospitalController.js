@@ -178,9 +178,9 @@ const putHospital = async (req, res, next) => {
         hospital.location = location;
         hospital.mobile = mobile;
         hospital.email = email;
-        hospital.village = village;
-        hospital.mandal = mandal;
-        hospital.district = district;
+        hospital.village = village.trim().toUpperCase();
+        hospital.mandal = mandal.trim().toUpperCase();
+        hospital.district = district.trim().toUpperCase();
         hospital.about = about;
 
         await hospital.save();
