@@ -71,7 +71,7 @@ const getHolderCard = async (req, res, next) => {
 
     try {
         const holder = await Holder.findById(holderId)
-            .select('name holderId gender mobile village mandal district pincode photo')
+            .select('name holderId gender mobile village mandal district pincode photo createdAt')
             .exec();
 
         res.json(holder);
