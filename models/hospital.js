@@ -29,19 +29,27 @@ const hospitalSchema = new Schema({
     },
     email: {
         type: String,
-        required: true
+        required: true,
+        lowercase: true,
+        trim: true
     },
     village: {
         type: String,
-        required: true
+        required: true,
+        lowercase: true,
+        trim: true
     },
     mandal: {
         type: String,
-        required: true
+        required: true,
+        lowercase: true,
+        trim: true
     },
     district: {
         type: String,
-        required: true
+        required: true,
+        lowercase: true,
+        trim: true
     },
     about: {
         type: String,

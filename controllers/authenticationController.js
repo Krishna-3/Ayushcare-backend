@@ -84,10 +84,10 @@ const handleHolderRegister = async (req, res, next) => {
     if (expectedSignature !== razorpay_signature) return res.status(400).json({ 'message': 'Payment is invalid' });
 
     const [holder, hospital, employee, admin] = await Promise.all([
-        Holder.findOne({ email }).exec(),
-        Hospital.findOne({ email }).exec(),
-        Employee.findOne({ email }).exec(),
-        Admin.findOne({ email }).exec(),
+        Holder.findOne({ email: email.toLowerCase() }).exec(),
+        Hospital.findOne({ email: email.toLowerCase() }).exec(),
+        Employee.findOne({ email: email.toLowerCase() }).exec(),
+        Admin.findOne({ email: email.toLowerCase() }).exec(),
     ]);
     const duplicateUser = holder || hospital || employee || admin;
     if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given email already exists!' });
@@ -134,10 +134,10 @@ const handleHospitalRegister = async (req, res, next) => {
     if (!name || !password || !area || !location || !mobile || !email || !village || !mandal || !district || !about) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
     const [holder, hospital, employee, admin] = await Promise.all([
-        Holder.findOne({ email }).exec(),
-        Hospital.findOne({ email }).exec(),
-        Employee.findOne({ email }).exec(),
-        Admin.findOne({ email }).exec(),
+        Holder.findOne({ email: email.toLowerCase() }).exec(),
+        Hospital.findOne({ email: email.toLowerCase() }).exec(),
+        Employee.findOne({ email: email.toLowerCase() }).exec(),
+        Admin.findOne({ email: email.toLowerCase() }).exec(),
     ]);
     const duplicateUser = holder || hospital || employee || admin;
     if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given email already exists!' });
@@ -152,9 +152,9 @@ const handleHospitalRegister = async (req, res, next) => {
             location,
             mobile,
             email,
-            village: village.trim().toUpperCase(),
-            mandal: mandal.trim().toUpperCase(),
-            district: district.trim().toUpperCase(),
+            village,
+            mandal,
+            district,
             about,
         });
 
@@ -170,10 +170,10 @@ const handleEmployeeRegister = async (req, res, next) => {
     if (!name || !gender || !parent || !mobile || !email || !address || !educationQualification || !aadhaar || !pan || !bank || !ifsc) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
     const [holder, hospital, employee, admin] = await Promise.all([
-        Holder.findOne({ email }).exec(),
-        Hospital.findOne({ email }).exec(),
-        Employee.findOne({ email }).exec(),
-        Admin.findOne({ email }).exec(),
+        Holder.findOne({ email: email.toLowerCase() }).exec(),
+        Hospital.findOne({ email: email.toLowerCase() }).exec(),
+        Employee.findOne({ email: email.toLowerCase() }).exec(),
+        Admin.findOne({ email: email.toLowerCase() }).exec(),
     ]);
     const duplicateUser = holder || hospital || employee || admin;
     if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given email already exists!' });
@@ -217,10 +217,10 @@ const handleLogin = async (req, res, next) => {
 
     try {
         const [holder, hospital, employee, admin] = await Promise.all([
-            Holder.findOne({ email }).exec(),
-            Hospital.findOne({ email }).exec(),
-            Employee.findOne({ email }).exec(),
-            Admin.findOne({ email }).exec(),
+            Holder.findOne({ email: email.toLowerCase() }).exec(),
+            Hospital.findOne({ email: email.toLowerCase() }).exec(),
+            Employee.findOne({ email: email.toLowerCase() }).exec(),
+            Admin.findOne({ email: email.toLowerCase() }).exec(),
         ]);
         const user = holder || hospital || employee || admin;
 
@@ -269,10 +269,10 @@ const forgotPassword = async (req, res, next) => {
 
     try {
         const [holder, hospital, employee, admin] = await Promise.all([
-            Holder.findOne({ email }).exec(),
-            Hospital.findOne({ email }).exec(),
-            Employee.findOne({ email }).exec(),
-            Admin.findOne({ email }).exec(),
+            Holder.findOne({ email: email.toLowerCase() }).exec(),
+            Hospital.findOne({ email: email.toLowerCase() }).exec(),
+            Employee.findOne({ email: email.toLowerCase() }).exec(),
+            Admin.findOne({ email: email.toLowerCase() }).exec(),
         ]);
         const user = holder || hospital || employee || admin;
 
@@ -306,10 +306,10 @@ const putPassword = async (req, res, next) => {
 
     try {
         const [holder, hospital, employee, admin] = await Promise.all([
-            Holder.findOne({ email }).exec(),
-            Hospital.findOne({ email }).exec(),
-            Employee.findOne({ email }).exec(),
-            Admin.findOne({ email }).exec(),
+            Holder.findOne({ email: email.toLowerCase() }).exec(),
+            Hospital.findOne({ email: email.toLowerCase() }).exec(),
+            Employee.findOne({ email: email.toLowerCase() }).exec(),
+            Admin.findOne({ email: email.toLowerCase() }).exec(),
         ]);
         const user = holder || hospital || employee || admin;
 
