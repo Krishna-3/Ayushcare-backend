@@ -48,6 +48,26 @@ const handleCreateOrder = async (req, res, next) => {
     }
 }
 
+const getConflictHolder = async (req, res, next) => {
+    const { holderEmail } = req.query;
+
+    try {
+        const [holder, hospital, employee, admin] = await Promise.all([
+            Holder.findOne({ email: holderEmail }).exec(),
+            Hospital.findOne({ email: holderEmail }).exec(),
+            Employee.findOne({ email: holderEmail }).exec(),
+            Admin.findOne({ email: holderEmail }).exec(),
+        ]);
+        const duplicateUser = holder || hospital || employee || admin;
+
+        if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given email already exists!' });
+        else return res.status(200).json({ duplicate: false });
+
+    } catch (err) {
+        next(err);
+    }
+}
+
 const handleHolderRegister = async (req, res, next) => {
     const { name, gender, age, mobile, email, occupation, address, village, mandal, district, pincode, aadhaar, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     if (!name || !gender || !age || !mobile || !email || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
@@ -315,6 +335,7 @@ const putPassword = async (req, res, next) => {
 
 module.exports = {
     handleCreateOrder,
+    getConflictHolder,
     handleLogin,
     handleHolderRegister,
     handleHospitalRegister,

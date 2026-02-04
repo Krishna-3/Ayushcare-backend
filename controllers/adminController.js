@@ -170,6 +170,15 @@ const deleteEmployee = async (req, res, next) => {
     try {
         const employee = await Employee.findByIdAndDelete(employeeId).exec();
 
+        const holdersByEmployees = await Holder.find({ registeredBy: employee._id }).exec();
+
+        const ids = holdersByEmployees.map(h => h._id)
+
+        await Holder.updateMany(
+            { _id: { $in: ids } },
+            { $set: { registeredBy: null } }
+        ).exec();
+
         res.json({ 'success': `Employee ${employee.name} delete` });
 
     } catch (err) {

@@ -6,6 +6,8 @@ const authenticationController = require('../controllers/authenticationControlle
 
 router.get('/createOrder', verifyJWT, verifyRoles(['employee']), authenticationController.handleCreateOrder);
 
+router.get('/getConflictHolder', verifyJWT, verifyRoles(['employee']), authenticationController.getConflictHolder);
+
 router.post('/holderRegister', verifyJWT, verifyRoles(['employee']), authenticationController.handleHolderRegister);
 
 router.post('/hospitalRegister', authenticationController.handleHospitalRegister);
