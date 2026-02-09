@@ -2,23 +2,8 @@ const Holder = require('../models/holder');
 const Member = require('../models/member');
 const Hospital = require('../models/hospital');
 
-const getMembers = async (req, res, next) => {
-    const holderId = req.id;
-
-    try {
-        const holder = await Holder.findById(holderId).populate('members', '-holder -__v').exec();
-
-        const holderMembers = holder.members;
-
-        res.json(holderMembers);
-    }
-    catch (err) {
-        next(err);
-    }
-}
-
 const addMember = async (req, res, next) => {
-    const holderId = req.id;
+    const { holderId } = req.params;
     const { name, gender, age, mobile } = req.body;
     if (!name || !gender || !age || !mobile) return res.status(400).json({ 'message': 'All fields required' });
 
@@ -48,10 +33,10 @@ const addMember = async (req, res, next) => {
 }
 
 const getHolder = async (req, res, next) => {
-    const holderId = req.id;
+    const { holderId } = req.params;
 
     try {
-        const holder = await Holder.findById(holderId).select('-password -members -role -createdAt -updatedAt -__v -registeredBy').exec();
+        const holder = await Holder.findById(holderId).populate('members').select('-password -role -createdAt -updatedAt -__v -registeredBy').exec();
 
         res.json(holder);
     }
@@ -61,7 +46,7 @@ const getHolder = async (req, res, next) => {
 }
 
 const putHolder = async (req, res, next) => {
-    const holderId = req.id;
+    const { holderId } = req.params;
     const { name, gender, age, mobile, email, occupation, address, village, mandal, district, pincode, aadhaar } = req.body;
     if (!name || !gender || !age || !mobile || !email || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
@@ -72,7 +57,6 @@ const putHolder = async (req, res, next) => {
         holder.gender = gender;
         holder.age = age;
         holder.mobile = mobile;
-        holder.email = email;
         holder.occupation = occupation;
         holder.address = address;
         holder.village = village;
@@ -91,13 +75,12 @@ const putHolder = async (req, res, next) => {
 }
 
 const deleteMember = async (req, res, next) => {
-    const holderId = req.id;
     const { memberId } = req.params;
     if (!memberId) return res.status(400).json({ 'message': 'Member required' });
 
     try {
-        const holder = await Holder.findById(holderId).exec();
         const member = await Member.findById(memberId).exec();
+        const holder = await Holder.findById(member.holder).exec();
         if (!member) return res.status(401).json({ 'message': 'invalid member' });
 
         const patientExists = await Hospital.exists({ "patients.patient": member._id }).exec();
@@ -117,7 +100,6 @@ const deleteMember = async (req, res, next) => {
 }
 
 module.exports = {
-    getMembers,
     addMember,
     getHolder,
     putHolder,

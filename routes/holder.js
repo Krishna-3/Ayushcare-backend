@@ -4,15 +4,13 @@ const verifyRoles = require('../middleware/verifyRole');
 const holderController = require('../controllers/holderController');
 const photoUpload = require('../middleware/upload');
 
-router.use(verifyRoles('holder'));
+router.use(verifyRoles('admin'));
 
-router.get('/getMembers', holderController.getMembers);
+router.post('/addMember/:holderId', holderController.addMember);
 
-router.post('/addMember', holderController.addMember);
+router.get('/getHolder/:holderId', holderController.getHolder);
 
-router.get('/getHolder', holderController.getHolder);
-
-router.put('/putHolder', holderController.putHolder);
+router.put('/putHolder/:holderId', holderController.putHolder);
 
 router.delete('/deleteMember/:memberId', holderController.deleteMember);
 

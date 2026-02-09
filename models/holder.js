@@ -7,10 +7,6 @@ const holderSchema = new Schema({
         type: String,
         required: true
     },
-    password: {
-        type: String,
-        required: true
-    },
     holderId: {
         type: Number,
         unique: true
@@ -32,12 +28,6 @@ const holderSchema = new Schema({
         required: true,
         min: 1000000000,
         max: 9999999999
-    },
-    email: {
-        type: String,
-        required: true,
-        lowercase: true,
-        trim: true
     },
     occupation: {
         type: String,

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const Holder = require('../models/holder');
+const Member = require('../models/member');
 const Hospital = require('../models/hospital');
 const Employee = require('../models/employee');
 const Admin = require('../models/admin');
@@ -49,18 +50,12 @@ const handleCreateOrder = async (req, res, next) => {
 }
 
 const getConflictHolder = async (req, res, next) => {
-    const { holderEmail } = req.query;
+    const { holderMobile } = req.query;
 
     try {
-        const [holder, hospital, employee, admin] = await Promise.all([
-            Holder.findOne({ email: holderEmail }).exec(),
-            Hospital.findOne({ email: holderEmail }).exec(),
-            Employee.findOne({ email: holderEmail }).exec(),
-            Admin.findOne({ email: holderEmail }).exec(),
-        ]);
-        const duplicateUser = holder || hospital || employee || admin;
+        const duplicateUser = Holder.findOne({ mobile: holderMobile }).exec();
 
-        if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given email already exists!' });
+        if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given mobile number already exists!' });
         else return res.status(200).json({ duplicate: false });
 
     } catch (err) {
@@ -69,8 +64,8 @@ const getConflictHolder = async (req, res, next) => {
 }
 
 const handleHolderRegister = async (req, res, next) => {
-    const { name, gender, age, mobile, email, occupation, address, village, mandal, district, pincode, aadhaar, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    if (!name || !gender || !age || !mobile || !email || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
+    const { name, gender, age, mobile, occupation, address, village, mandal, district, pincode, aadhaar, members, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    if (!name || !gender || !age || !mobile || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar || !members || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
     const employeeId = req.id;
 
@@ -83,27 +78,14 @@ const handleHolderRegister = async (req, res, next) => {
 
     if (expectedSignature !== razorpay_signature) return res.status(400).json({ 'message': 'Payment is invalid' });
 
-    const [holder, hospital, employee, admin] = await Promise.all([
-        Holder.findOne({ email: email.toLowerCase() }).exec(),
-        Hospital.findOne({ email: email.toLowerCase() }).exec(),
-        Employee.findOne({ email: email.toLowerCase() }).exec(),
-        Admin.findOne({ email: email.toLowerCase() }).exec(),
-    ]);
-    const duplicateUser = holder || hospital || employee || admin;
-    if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given email already exists!' });
-
-    const [pwdhash, tempPassword] = await generateTempPasswordAndHash();
-
     try {
         const employee = await Employee.findById(employeeId).exec();
 
         const query = await Holder.create({
             name,
-            password: pwdhash,
             gender,
             age,
             mobile,
-            email,
             occupation,
             address,
             village,
@@ -114,13 +96,26 @@ const handleHolderRegister = async (req, res, next) => {
             registeredBy: employee._id
         });
 
-        const mailOptions = {
-            from: process.env.EMAIL,
-            to: email,
-            subject: 'Temporary password',
-            html: `<p>Your temporary password to login to Ayushcare is <b>${tempPassword}</b></p>`
-        };
-        await transporter.sendMail(mailOptions);
+        const newMembers = [];
+
+        if (members.length < 4) {
+            members.forEach(async member => {
+                const newMember = await Member.create({
+                    name: member.name ? member.name : '',
+                    gender: member.gender ? member.gender : '',
+                    age: member.age ? member.age : 0,
+                    mobile: member.mobile ? member.mobile : 9999999999,
+                    holder: query._id
+                });
+
+                newMembers.push(newMember._id);
+            });
+
+            const holder = await Holder.findById(query._id).exec();
+
+            holder.members = newMembers;
+            await holder.save();
+        }
 
         res.status(201).json({ 'success': `Holder ${name} created`, holderId: query._id });
     }
@@ -133,13 +128,12 @@ const handleHospitalRegister = async (req, res, next) => {
     const { name, password, area, location, mobile, email, village, mandal, district, about } = req.body;
     if (!name || !password || !area || !location || !mobile || !email || !village || !mandal || !district || !about) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
-    const [holder, hospital, employee, admin] = await Promise.all([
-        Holder.findOne({ email: email.toLowerCase() }).exec(),
+    const [hospital, employee, admin] = await Promise.all([
         Hospital.findOne({ email: email.toLowerCase() }).exec(),
         Employee.findOne({ email: email.toLowerCase() }).exec(),
         Admin.findOne({ email: email.toLowerCase() }).exec(),
     ]);
-    const duplicateUser = holder || hospital || employee || admin;
+    const duplicateUser = hospital || employee || admin;
     if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given email already exists!' });
 
     const pwdhash = await bcrypt.hash(password, 10);
@@ -169,13 +163,12 @@ const handleEmployeeRegister = async (req, res, next) => {
     const { name, gender, parent, mobile, email, address, educationQualification, aadhaar, pan, bank, ifsc } = req.body;
     if (!name || !gender || !parent || !mobile || !email || !address || !educationQualification || !aadhaar || !pan || !bank || !ifsc) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
-    const [holder, hospital, employee, admin] = await Promise.all([
-        Holder.findOne({ email: email.toLowerCase() }).exec(),
+    const [hospital, employee, admin] = await Promise.all([
         Hospital.findOne({ email: email.toLowerCase() }).exec(),
         Employee.findOne({ email: email.toLowerCase() }).exec(),
         Admin.findOne({ email: email.toLowerCase() }).exec(),
     ]);
-    const duplicateUser = holder || hospital || employee || admin;
+    const duplicateUser = hospital || employee || admin;
     if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given email already exists!' });
 
     const [pwdhash, tempPassword] = await generateTempPasswordAndHash();
@@ -216,13 +209,12 @@ const handleLogin = async (req, res, next) => {
     if (!email || !password) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
     try {
-        const [holder, hospital, employee, admin] = await Promise.all([
-            Holder.findOne({ email: email.toLowerCase() }).exec(),
+        const [hospital, employee, admin] = await Promise.all([
             Hospital.findOne({ email: email.toLowerCase() }).exec(),
             Employee.findOne({ email: email.toLowerCase() }).exec(),
             Admin.findOne({ email: email.toLowerCase() }).exec(),
         ]);
-        const user = holder || hospital || employee || admin;
+        const user = hospital || employee || admin;
 
         if (!user) return res.status(401).json({ 'message': 'Invalid credentials' });
 
@@ -246,7 +238,7 @@ const handleLogin = async (req, res, next) => {
             // @ts-ignore
             user.createdAt && user.updatedAt && user.createdAt.getTime() === user.updatedAt.getTime();
 
-        ((user.role === 'holder' || user.role === 'employee') && firstLogin) ?
+        ((user.role === 'employee') && firstLogin) ?
             res.json({
                 'success': `${user.name} is logged in first time!`,
                 'firstLogin': true,
@@ -268,13 +260,12 @@ const forgotPassword = async (req, res, next) => {
     if (!email) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
     try {
-        const [holder, hospital, employee, admin] = await Promise.all([
-            Holder.findOne({ email: email.toLowerCase() }).exec(),
+        const [hospital, employee, admin] = await Promise.all([
             Hospital.findOne({ email: email.toLowerCase() }).exec(),
             Employee.findOne({ email: email.toLowerCase() }).exec(),
             Admin.findOne({ email: email.toLowerCase() }).exec(),
         ]);
-        const user = holder || hospital || employee || admin;
+        const user = hospital || employee || admin;
 
         if (!user) return res.status(401).json({ 'message': 'Invalid credentials' });
 
@@ -305,13 +296,12 @@ const putPassword = async (req, res, next) => {
     if (!newPassword || !tempPassword) return res.status(400).json({ 'message': 'All fields required' });
 
     try {
-        const [holder, hospital, employee, admin] = await Promise.all([
-            Holder.findOne({ email: email.toLowerCase() }).exec(),
+        const [hospital, employee, admin] = await Promise.all([
             Hospital.findOne({ email: email.toLowerCase() }).exec(),
             Employee.findOne({ email: email.toLowerCase() }).exec(),
             Admin.findOne({ email: email.toLowerCase() }).exec(),
         ]);
-        const user = holder || hospital || employee || admin;
+        const user = hospital || employee || admin;
 
         if (!user) return res.status(401).json({ 'message': 'Invalid credentials' });
 
