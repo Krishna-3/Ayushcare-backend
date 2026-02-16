@@ -11,8 +11,7 @@ const getUnapprovedHospitals = async (req, res, next) => {
             Hospital.find({ adminApproved: false })
                 .select('-password')
                 .skip(skip)
-                .limit(10)
-                .sort({ createdAt: -1 }),
+                .limit(10),
             Hospital.find({ adminApproved: false }).countDocuments()
         ]);
 

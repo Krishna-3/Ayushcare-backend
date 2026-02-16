@@ -47,8 +47,8 @@ const getHolder = async (req, res, next) => {
 
 const putHolder = async (req, res, next) => {
     const { holderId } = req.params;
-    const { name, gender, age, mobile, email, occupation, address, village, mandal, district, pincode, aadhaar } = req.body;
-    if (!name || !gender || !age || !mobile || !email || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
+    const { name, gender, age, mobile, occupation, address, village, mandal, district, pincode, aadhaar } = req.body;
+    if (!name || !gender || !age || !mobile || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
     try {
         const holder = await Holder.findById(holderId).exec();

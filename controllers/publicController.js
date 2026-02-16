@@ -132,12 +132,19 @@ const getHospitals = async (req, res, next) => {
 }
 
 const getAllHospitals = async (req, res, next) => {
-    try {
-        const hospitals = await Hospital.find({ adminApproved: true })
-            .select('name photo')
-            .exec();
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * 12;
 
-        res.json(hospitals);
+    try {
+        const [hospitals, total] = await Promise.all([
+            Hospital.find({ adminApproved: true })
+                .select('name photo')
+                .skip(skip)
+                .limit(12),
+            Hospital.find({ adminApproved: true }).countDocuments()
+        ]);
+
+        res.json({ hospitals, total });
 
     } catch (err) {
         next(err);

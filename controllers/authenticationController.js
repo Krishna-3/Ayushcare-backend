@@ -23,10 +23,7 @@ const transporter = nodemailer.createTransport({
 });
 
 const generateTempPasswordAndHash = async () => {
-    const tempPassword = crypto.randomBytes(10)
-        .toString('base64')
-        .replace(/[^a-zA-Z0-9]/g, '')
-        .slice(0, 10);
+    const tempPassword = Math.floor(1000 + Math.random() * 9000).toString();
 
     return [await bcrypt.hash(tempPassword, 10), tempPassword];
 }
@@ -53,7 +50,7 @@ const getConflictHolder = async (req, res, next) => {
     const { holderMobile } = req.query;
 
     try {
-        const duplicateUser = Holder.findOne({ mobile: holderMobile }).exec();
+        const duplicateUser = await Holder.findOne({ mobile: holderMobile }).exec();
 
         if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given mobile number already exists!' });
         else return res.status(200).json({ duplicate: false });
@@ -96,24 +93,22 @@ const handleHolderRegister = async (req, res, next) => {
             registeredBy: employee._id
         });
 
-        const newMembers = [];
+        if (members.length < 5) {
+            const newMembers = await Promise.all(
+                members.map(member =>
+                    Member.create({
+                        name: member.name || '',
+                        gender: member.gender || 'male',
+                        age: member.age || 0,
+                        mobile: member.mobile || 9999999999,
+                        holder: query._id
+                    })
+                )
+            );
 
-        if (members.length < 4) {
-            members.forEach(async member => {
-                const newMember = await Member.create({
-                    name: member.name ? member.name : '',
-                    gender: member.gender ? member.gender : '',
-                    age: member.age ? member.age : 0,
-                    mobile: member.mobile ? member.mobile : 9999999999,
-                    holder: query._id
-                });
+            const holder = await Holder.findById(query._id);
 
-                newMembers.push(newMember._id);
-            });
-
-            const holder = await Holder.findById(query._id).exec();
-
-            holder.members = newMembers;
+            holder.members = newMembers.map(m => m._id);
             await holder.save();
         }
 
@@ -129,9 +124,9 @@ const handleHospitalRegister = async (req, res, next) => {
     if (!name || !password || !area || !location || !mobile || !email || !village || !mandal || !district || !about) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
     const [hospital, employee, admin] = await Promise.all([
-        Hospital.findOne({ email: email.toLowerCase() }).exec(),
-        Employee.findOne({ email: email.toLowerCase() }).exec(),
-        Admin.findOne({ email: email.toLowerCase() }).exec(),
+        Hospital.findOne({ email: email.toLowerCase().trim() }).exec(),
+        Employee.findOne({ email: email.toLowerCase().trim() }).exec(),
+        Admin.findOne({ email: email.toLowerCase().trim() }).exec(),
     ]);
     const duplicateUser = hospital || employee || admin;
     if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given email already exists!' });
@@ -164,9 +159,9 @@ const handleEmployeeRegister = async (req, res, next) => {
     if (!name || !gender || !parent || !mobile || !email || !address || !educationQualification || !aadhaar || !pan || !bank || !ifsc) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
 
     const [hospital, employee, admin] = await Promise.all([
-        Hospital.findOne({ email: email.toLowerCase() }).exec(),
-        Employee.findOne({ email: email.toLowerCase() }).exec(),
-        Admin.findOne({ email: email.toLowerCase() }).exec(),
+        Hospital.findOne({ email: email.toLowerCase().trim() }).exec(),
+        Employee.findOne({ email: email.toLowerCase().trim() }).exec(),
+        Admin.findOne({ email: email.toLowerCase().trim() }).exec(),
     ]);
     const duplicateUser = hospital || employee || admin;
     if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given email already exists!' });
@@ -210,9 +205,9 @@ const handleLogin = async (req, res, next) => {
 
     try {
         const [hospital, employee, admin] = await Promise.all([
-            Hospital.findOne({ email: email.toLowerCase() }).exec(),
-            Employee.findOne({ email: email.toLowerCase() }).exec(),
-            Admin.findOne({ email: email.toLowerCase() }).exec(),
+            Hospital.findOne({ email: email.toLowerCase().trim() }).exec(),
+            Employee.findOne({ email: email.toLowerCase().trim() }).exec(),
+            Admin.findOne({ email: email.toLowerCase().trim() }).exec(),
         ]);
         const user = hospital || employee || admin;
 
@@ -261,9 +256,9 @@ const forgotPassword = async (req, res, next) => {
 
     try {
         const [hospital, employee, admin] = await Promise.all([
-            Hospital.findOne({ email: email.toLowerCase() }).exec(),
-            Employee.findOne({ email: email.toLowerCase() }).exec(),
-            Admin.findOne({ email: email.toLowerCase() }).exec(),
+            Hospital.findOne({ email: email.toLowerCase().trim() }).exec(),
+            Employee.findOne({ email: email.toLowerCase().trim() }).exec(),
+            Admin.findOne({ email: email.toLowerCase().trim() }).exec(),
         ]);
         const user = hospital || employee || admin;
 
@@ -297,9 +292,9 @@ const putPassword = async (req, res, next) => {
 
     try {
         const [hospital, employee, admin] = await Promise.all([
-            Hospital.findOne({ email: email.toLowerCase() }).exec(),
-            Employee.findOne({ email: email.toLowerCase() }).exec(),
-            Admin.findOne({ email: email.toLowerCase() }).exec(),
+            Hospital.findOne({ email: email.toLowerCase().trim() }).exec(),
+            Employee.findOne({ email: email.toLowerCase().trim() }).exec(),
+            Admin.findOne({ email: email.toLowerCase().trim() }).exec(),
         ]);
         const user = hospital || employee || admin;
 
