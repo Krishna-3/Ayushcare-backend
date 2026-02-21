@@ -38,7 +38,8 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-    console.log(err.stack);
+    console.error('\n\nDATE AND TIME : ' + new Date().toString());
+    console.log('ERROR : ' + err.stack);
     res.status(500).json({ 'message': err.message });
 });
 
