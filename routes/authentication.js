@@ -4,11 +4,13 @@ const verifyRoles = require('../middleware/verifyRole');
 const verifyJWT = require('../middleware/verifyJWT');
 const authenticationController = require('../controllers/authenticationController');
 
-router.get('/createOrder', verifyJWT, verifyRoles(['employee']), authenticationController.handleCreateOrder);
+router.post('/createOrder', verifyJWT, verifyRoles(['employee']), authenticationController.handleCreateOrderAndHolder);
+
+router.post("/razorpayWebhook", authenticationController.handlePaymentWebhook);
 
 router.get('/getConflictHolder', verifyJWT, verifyRoles(['employee']), authenticationController.getConflictHolder);
 
-router.post('/holderRegister', verifyJWT, verifyRoles(['employee']), authenticationController.handleHolderRegister);
+router.post('/holderRegister', verifyJWT, verifyRoles(['employee']), authenticationController.handleHolderRegisterVerification);
 
 router.post('/hospitalRegister', authenticationController.handleHospitalRegister);
 

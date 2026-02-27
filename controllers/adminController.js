@@ -1,6 +1,7 @@
 const Hospital = require('../models/hospital');
 const Holder = require('../models/holder');
 const Employee = require('../models/employee');
+const Member = require('../models/member');
 
 const getUnapprovedHospitals = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
@@ -22,6 +23,26 @@ const getUnapprovedHospitals = async (req, res, next) => {
     }
 }
 
+const getUnpaidHolders = async (req, res, next) => {
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * 10;
+
+    try {
+        const [holders, total] = await Promise.all([
+            Holder.find({ paymentStatus: 'pending' })
+                .select('name mobile email members holderId')
+                .skip(skip)
+                .limit(10)
+                .sort({ createdAt: -1 }),
+            Holder.find({ paymentStatus: 'pending' }).countDocuments()
+        ]);
+
+        res.json({ holders, total })
+    } catch (err) {
+        next(err);
+    }
+}
+
 const getHoldersByEmployees = async (req, res, next) => {
     const { employeeId } = req.params;
     const page = parseInt(req.query.page) || 1;
@@ -31,12 +52,12 @@ const getHoldersByEmployees = async (req, res, next) => {
         const employee = await Employee.findById(employeeId).exec();
 
         const [holdersByEmployees, total] = await Promise.all([
-            Holder.find({ registeredBy: employee._id })
+            Holder.find({ registeredBy: employee._id, paymentStatus: 'completed' })
                 .select('name mobile email members')
                 .skip(skip)
                 .limit(10)
                 .sort({ createdAt: -1 }),
-            Holder.find({ registeredBy: employee._id }).countDocuments()
+            Holder.find({ registeredBy: employee._id, paymentStatus: 'completed' }).countDocuments()
         ]);
 
         res.json({ holdersByEmployees, total });
@@ -97,13 +118,13 @@ const getDashboard = async (req, res, next) => {
         ]);
 
         const [holders, totalHolders, totalHoldersWithMembers] = await Promise.all([
-            Holder.find({})
+            Holder.find({ paymentStatus: 'completed' })
                 .select('name mobile email members holderId')
                 .skip(skip)
                 .limit(10)
                 .sort({ createdAt: -1 }),
-            Holder.find({}).countDocuments(),
-            Holder.find({})
+            Holder.find({ paymentStatus: 'completed' }).countDocuments(),
+            Holder.find({ paymentStatus: 'completed' })
                 .select('members')
         ]);
 
@@ -163,6 +184,23 @@ const getEmployeeCard = async (req, res, next) => {
     }
 }
 
+const deleteUnpaidHolder = async (req, res, next) => {
+    const { holderId } = req.params;
+
+    try {
+        const holder = await Holder.findByIdAndDelete(holderId).exec();
+
+        await Member.deleteMany({
+            _id: { $in: holder.members }
+        });
+
+        res.json({ 'success': `Holder ${holder.name} deleted` })
+
+    } catch (err) {
+        next(err);
+    }
+}
+
 const deleteEmployee = async (req, res, next) => {
     const { employeeId } = req.params;
 
@@ -200,10 +238,12 @@ const deleteHospital = async (req, res, next) => {
 
 module.exports = {
     getUnapprovedHospitals,
+    getUnpaidHolders,
     getHoldersByEmployees,
     getDashboard,
     approveHospital,
     getEmployeeCard,
+    deleteUnpaidHolder,
     deleteEmployee,
     deleteHospital,
     getPatientsByHospitals

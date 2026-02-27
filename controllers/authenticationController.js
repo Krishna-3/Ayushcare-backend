@@ -28,7 +28,11 @@ const generateTempPasswordAndHash = async () => {
     return [await bcrypt.hash(tempPassword, 10), tempPassword];
 }
 
-const handleCreateOrder = async (req, res, next) => {
+const handleCreateOrderAndHolder = async (req, res, next) => {
+    const { name, gender, age, mobile, occupation, address, village, mandal, district, pincode, aadhaar, members } = req.body;
+    if (!name || !gender || !age || !mobile || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar || !members) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
+
+    const employeeId = req.id;
 
     try {
         const order = await razorpay.orders.create({
@@ -39,43 +43,6 @@ const handleCreateOrder = async (req, res, next) => {
 
         if (!order) return res.status(500).json('Payment Error');
 
-        res.json(order);
-    }
-    catch (err) {
-        next(err);
-    }
-}
-
-const getConflictHolder = async (req, res, next) => {
-    const { holderMobile } = req.query;
-
-    try {
-        const duplicateUser = await Holder.findOne({ mobile: holderMobile }).exec();
-
-        if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given mobile number already exists!' });
-        else return res.status(200).json({ duplicate: false });
-
-    } catch (err) {
-        next(err);
-    }
-}
-
-const handleHolderRegister = async (req, res, next) => {
-    const { name, gender, age, mobile, occupation, address, village, mandal, district, pincode, aadhaar, members, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    if (!name || !gender || !age || !mobile || !occupation || !address || !village || !mandal || !district || !pincode || !aadhaar || !members || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
-
-    const employeeId = req.id;
-
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
-
-    const expectedSignature = crypto
-        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-        .update(body)
-        .digest("hex");
-
-    if (expectedSignature !== razorpay_signature) return res.status(400).json({ 'message': 'Payment is invalid' });
-
-    try {
         const employee = await Employee.findById(employeeId).exec();
 
         const query = await Holder.create({
@@ -90,7 +57,8 @@ const handleHolderRegister = async (req, res, next) => {
             district,
             pincode,
             aadhaar,
-            registeredBy: employee._id
+            registeredBy: employee._id,
+            orderId: order.id
         });
 
         if (members.length < 5) {
@@ -112,7 +80,106 @@ const handleHolderRegister = async (req, res, next) => {
             await holder.save();
         }
 
-        res.status(201).json({ 'success': `Holder ${name} created`, holderId: query._id });
+        res.json(order);
+    }
+    catch (err) {
+        next(err);
+    }
+}
+
+const handlePaymentWebhook = async (req, res, next) => {
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const receivedSignature = req.headers["x-razorpay-signature"];
+
+    try {
+        const expectedSignature = crypto
+            .createHmac("sha256", secret)
+            .update(req.body)
+            .digest("hex");
+
+        if (receivedSignature !== expectedSignature) {
+            //("Invalid webhook signature");
+            return res.status(400).send("Invalid signature");
+        }
+
+        const event = JSON.parse(req.body.toString());
+
+        if (event.event === "payment.captured") {
+
+            const payment = event.payload.payment.entity;
+
+            const orderId = payment.order_id;
+            const paymentId = payment.id;
+
+            const holder = await Holder.findOne({ orderId });
+
+            if (!holder) {
+                //("Holder not found for order:", orderId);
+                return res.status(200).send("OK");
+            }
+
+            if (holder.paymentStatus === "completed") {
+                return res.status(200).send("Already updated");
+            }
+
+            holder.paymentStatus = "completed";
+            holder.paymentId = paymentId;
+
+            await holder.save();
+
+            // ("Payment marked completed:", orderId);
+        }
+
+        res.status(200).send("OK");
+    } catch (err) {
+        next(err);
+    }
+}
+
+const getConflictHolder = async (req, res, next) => {
+    const { holderMobile } = req.query;
+
+    try {
+        const duplicateUser = await Holder.findOne({ mobile: holderMobile }).exec();
+
+        if (duplicateUser) return res.status(409).json({ 'message': 'Conflict - user with the given mobile number already exists!' });
+        else return res.status(200).json({ duplicate: false });
+
+    } catch (err) {
+        next(err);
+    }
+}
+
+const handleHolderRegisterVerification = async (req, res, next) => {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) return res.status(400).json({ 'message': 'Bad request - all fields are required' });
+
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+    const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+        .update(body)
+        .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) return res.status(400).json({ 'message': 'Payment is invalid' });
+
+    try {
+        const holder = await Holder.findOne({ orderId: razorpay_order_id });
+
+        if (!holder) {
+            return res.status(400).json({ 'message': 'Holder does not exist' });
+        }
+
+        if (holder.paymentStatus === "completed") {
+            return res.status(200).json({ 'success': `Holder ${holder.name} created`, holderId: holder._id });
+        }
+
+        holder.paymentStatus = "completed";
+        holder.paymentId = razorpay_payment_id;
+
+        await holder.save();
+
+        res.status(201).json({ 'success': `Holder ${holder.name} created`, holderId: holder._id });
     }
     catch (err) {
         next(err);
@@ -319,10 +386,11 @@ const putPassword = async (req, res, next) => {
 }
 
 module.exports = {
-    handleCreateOrder,
+    handleCreateOrderAndHolder,
+    handlePaymentWebhook,
     getConflictHolder,
     handleLogin,
-    handleHolderRegister,
+    handleHolderRegisterVerification,
     handleHospitalRegister,
     handleEmployeeRegister,
     forgotPassword,

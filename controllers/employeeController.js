@@ -10,12 +10,12 @@ const getDashboard = async (req, res, next) => {
         const employee = await Employee.findById(employeeId).exec();
 
         const [holders, total] = await Promise.all([
-            Holder.find({ registeredBy: employee._id })
+            Holder.find({ registeredBy: employee._id, paymentStatus: 'completed' })
                 .select('name mobile email members')
                 .skip(skip)
                 .limit(10)
                 .sort({ createdAt: -1 }),
-            Holder.find({ registeredBy: employee._id }).countDocuments()
+            Holder.find({ registeredBy: employee._id, paymentStatus: 'completed' }).countDocuments()
         ]);
 
         res.json({ holders, total });

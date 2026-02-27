@@ -15,6 +15,8 @@ app.use(credentials);
 
 app.use(cors(corsOptions));
 
+app.use("/razorpayWebhook", express.raw({ type: "application/json" }));
+
 app.use(express.urlencoded({ extended: false }));
 
 app.use(express.json());
@@ -39,7 +41,7 @@ app.use((req, res) => {
 
 app.use((err, req, res, next) => {
     console.error('\n\nDATE AND TIME : ' + new Date().toString());
-    console.log('ERROR : ' + err.stack);
+    console.error('ERROR : ' + err.stack);
     res.status(500).json({ 'message': err.message });
 });
 

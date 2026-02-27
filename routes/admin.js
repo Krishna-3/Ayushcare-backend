@@ -8,6 +8,8 @@ router.use(verifyRoles('admin'));
 
 router.get('/getUnapprovedHospitals', adminController.getUnapprovedHospitals);
 
+router.get('/getUnpaidHolders', adminController.getUnpaidHolders);
+
 router.get('/getHoldersByEmployees/:employeeId', adminController.getHoldersByEmployees);
 
 router.get('/getPatientsByHospitals/:hospitalId', adminController.getPatientsByHospitals);
@@ -17,6 +19,8 @@ router.get('/getDashboard', adminController.getDashboard);
 router.post('/approveHospital/:hospitalId', adminController.approveHospital);
 
 router.get('/getEmployeeCard/:employeeId', adminController.getEmployeeCard);
+
+router.delete('/deleteUnpaidHolder/:holderId', adminController.deleteUnpaidHolder);
 
 router.delete('/deleteEmployee/:employeeId', adminController.deleteEmployee);
 

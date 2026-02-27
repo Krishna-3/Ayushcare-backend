@@ -65,6 +65,19 @@ const holderSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'Employee'
     },
+    orderId: {
+        type: String,
+        requried: true,
+    },
+    paymentStatus: {
+        type: String,
+        default: 'pending',
+        requried: true,
+        enum: ['pending', 'completed']
+    },
+    paymentId: {
+        type: String,
+    },
     role: {
         type: String,
         default: 'holder',
