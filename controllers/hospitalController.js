@@ -16,7 +16,7 @@ const getPatients = async (req, res, next) => {
             Hospital.findById(hospitalId)
                 .populate({
                     path: 'patients.patient',
-                    select: 'name age gender mobile holder',
+                    select: 'name age gender mobile',
                     // @ts-ignore
                     refPath: 'patients.patientModel',
                     // populate: {
@@ -38,6 +38,43 @@ const getPatients = async (req, res, next) => {
 
     } catch (err) {
         next(err);
+    }
+}
+
+const getFilteredPatients = async (req, res, next) => {
+    const hospitalId = req.id;
+    const filter = (req.query.filter || "").trim();
+    if (!filter) return res.status(400).json({ 'message': 'filter is required' });
+
+    try {
+        const isNumber = /^\d+$/.test(filter);
+
+        let query = {
+            $or: [
+                { name: { $regex: `.*${filter}.*`, $options: "i" } },
+                ...(isNumber ? [{ mobile: Number(filter) }] : [])
+            ]
+        };
+
+        const filteredPatients = await Hospital.findById(hospitalId)
+            .populate({
+                path: 'patients.patient',
+                select: 'name age gender mobile',
+                // @ts-ignore
+                refPath: 'patients.patientModel',
+                match: query
+            })
+            .select('patients')
+            .exec();
+
+        filteredPatients.patients[0].patient === null
+            ?
+            res.status(400).json({ 'message': 'No Patients found' })
+            :
+            res.json(filteredPatients);
+
+    } catch (err) {
+        next(err)
     }
 }
 
@@ -233,6 +270,7 @@ const deletePatient = async (req, res, next) => {
 
 module.exports = {
     getPatients,
+    getFilteredPatients,
     getHolderMembers,
     getDoctors,
     addPatient,

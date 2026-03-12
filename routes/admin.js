@@ -2,13 +2,16 @@ const express = require('express');
 const router = express.Router();
 const verifyRoles = require('../middleware/verifyRole');
 const adminController = require('../controllers/adminController');
-const photoUpload = require('../middleware/upload');
 
 router.use(verifyRoles('admin'));
 
 router.get('/getUnapprovedHospitals', adminController.getUnapprovedHospitals);
 
 router.get('/getUnpaidHolders', adminController.getUnpaidHolders);
+
+router.get('/getFilteredDetails', adminController.getFilteredDetails);
+
+router.get('/getEmployeeDetails/:employeeId', adminController.getEmployeeDetails);
 
 router.get('/getHoldersByEmployees/:employeeId', adminController.getHoldersByEmployees);
 

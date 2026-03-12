@@ -25,6 +25,38 @@ const getDashboard = async (req, res, next) => {
     }
 }
 
+const getFilteredHolders = async (req, res, next) => {
+    const employeeId = req.id;
+    const filter = (req.query.filter || "").trim();
+    if (!filter) return res.status(400).json({ 'message': 'filter is required' });
+
+    try {
+        const isNumber = /^\d+$/.test(filter);
+
+        let query = {
+            $or: [
+                { name: { $regex: `.*${filter}.*`, $options: "i" } },
+                ...(isNumber ? [{ mobile: Number(filter) }] : [])
+            ]
+        };
+
+        const employee = await Employee.findById(employeeId).exec();
+
+        const filteredHolders = await Holder.find({ ...query, registeredBy: employee._id, paymentStatus: 'completed' })
+            .select('name mobile members holderId')
+            .exec();
+
+        filteredHolders.length === 0
+            ?
+            res.status(400).json({ 'message': 'No Holders found' })
+            :
+            res.json(filteredHolders);
+
+    } catch (err) {
+        next(err)
+    }
+}
+
 const uploadHolderPhoto = async (req, res, next) => {
     const { holderId } = req.params;
     const employeeId = req.id;
@@ -85,7 +117,7 @@ const getEmployee = async (req, res, next) => {
     const employeeId = req.id;
 
     try {
-        const employee = await Employee.findById(employeeId).select('-password -role -createdAt -updatedAt -__v').exec();
+        const employee = await Employee.findById(employeeId).select('-password -photo -role -createdAt -updatedAt -__v').exec();
 
         res.json(employee);
 
@@ -125,6 +157,7 @@ const putEmployee = async (req, res, next) => {
 
 module.exports = {
     getDashboard,
+    getFilteredHolders,
     uploadHolderPhoto,
     uploadEmployeePhoto,
     getHolderCard,

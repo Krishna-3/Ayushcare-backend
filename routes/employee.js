@@ -14,6 +14,8 @@ router.use(verifyRoles('employee'));
 
 router.get('/getDashboard', employeeController.getDashboard);
 
+router.get('/getFilteredHolders', employeeController.getFilteredHolders);
+
 router.get('/getEmployee', employeeController.getEmployee);
 
 router.put('/putEmployee', employeeController.putEmployee);

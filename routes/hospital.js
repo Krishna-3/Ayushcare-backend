@@ -25,6 +25,8 @@ router.use(verifyAdminApproved);
 
 router.get('/getPatients', hospitalController.getPatients);
 
+router.get('/getFilteredPatients', hospitalController.getFilteredPatients);
+
 router.get('/getHolderMembers/:holderId', hospitalController.getHolderMembers);
 
 router.post('/addPatient/:patientId', hospitalController.addPatient);

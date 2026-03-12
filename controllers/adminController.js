@@ -43,6 +43,65 @@ const getUnpaidHolders = async (req, res, next) => {
     }
 }
 
+const getFilteredDetails = async (req, res, next) => {
+    const filter = (req.query.filter || "").trim();
+    const entity = (req.query.entity || "").trim();
+    if (!filter) return res.status(400).json({ 'message': 'filter is required' });
+
+    try {
+        const isNumber = /^\d+$/.test(filter);
+
+        let query = {
+            $or: [
+                { name: { $regex: `.*${filter}.*`, $options: "i" } },
+                ...(isNumber ? [{ mobile: Number(filter) }] : [])
+            ]
+        };
+
+        let filteredDetails;
+
+        if (entity === 'holder') {
+            filteredDetails = await Holder.find({ ...query, paymentStatus: 'completed' })
+                .select('name mobile members holderId')
+                .exec();
+        } else if (entity === 'hospital') {
+            filteredDetails = await Hospital.find({ ...query, adminApproved: true })
+                .select('name area email doctors')
+                .exec();
+        } else if (entity === 'employee') {
+            filteredDetails = await Employee.find(query)
+                .select('name gender mobile email employeeId')
+                .exec();
+        } else {
+            return res.status(400).json({ 'message': 'Invalid search parameter' })
+        }
+
+        filteredDetails.length === 0
+            ?
+            res.status(400).json({ 'message': 'No details found' })
+            :
+            res.json(filteredDetails);
+
+    } catch (err) {
+        next(err)
+    }
+}
+
+const getEmployeeDetails = async (req, res, next) => {
+    const { employeeId } = req.params;
+
+    try {
+        const employee = await Employee.findById(employeeId)
+            .select('-password -photo -role -__v -createdAt -updatedAt')
+            .exec();
+
+        res.json(employee);
+
+    } catch (err) {
+        next(err)
+    }
+}
+
 const getHoldersByEmployees = async (req, res, next) => {
     const { employeeId } = req.params;
     const page = parseInt(req.query.page) || 1;
@@ -119,7 +178,7 @@ const getDashboard = async (req, res, next) => {
 
         const [holders, totalHolders, totalHoldersWithMembers] = await Promise.all([
             Holder.find({ paymentStatus: 'completed' })
-                .select('name mobile email members holderId')
+                .select('name mobile members holderId')
                 .skip(skip)
                 .limit(10)
                 .sort({ createdAt: -1 }),
@@ -237,6 +296,8 @@ const deleteHospital = async (req, res, next) => {
 }
 
 module.exports = {
+    getFilteredDetails,
+    getEmployeeDetails,
     getUnapprovedHospitals,
     getUnpaidHolders,
     getHoldersByEmployees,
